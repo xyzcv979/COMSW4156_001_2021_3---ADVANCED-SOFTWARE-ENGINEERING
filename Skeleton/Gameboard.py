@@ -34,7 +34,6 @@ class Gameboard():
 
     def setWinner(self, player):
         self.game_result = player
-        db.clear()
 
     def getCurrentTurn(self):
         return self.current_turn
@@ -45,7 +44,10 @@ class Gameboard():
     def getRemainMoves(self):
         return self.remaining_moves
 
-    def setRemainMoves(self, count):
+    def setRemainMoves(self, moves):
+        self.remaining_moves = moves
+
+    def decrementRemainMoves(self, count):
         self.remaining_moves -= count
 
     def drawCondition(self):
@@ -59,6 +61,7 @@ class Gameboard():
     def setBoard(self, newBoard):
         self.board = newBoard
 
+    # Converts 1D array to 2D array to set up as gameboard
     def convertToMatrix(self, newBoard, rows, columns):
         result = []
         start = 0
@@ -69,32 +72,36 @@ class Gameboard():
             end += columns
         return result
 
+    # Converts a string to 1D array
+    # newBoard comes in as string format from database
     def convertToBoard(self, newBoard):
-        board = [newBoard.split(' ')]
+        board = newBoard.split(' ')
         board = self.convertToMatrix(board, 6, 7)
-        print(board)
         self.board = board
 
+    # Initalize gameboard from database saved state
     def initSavedBoard(self):
         # Database (current_turn, board, winner, player1, player2,
         # remaining_moves)
         saved_state = db.getMove()
-        # print(saved_state)
         if(len(saved_state) != 0):
-            self.setCurrentTurn(saved_state[0])
-            self.convertToBoard(saved_state[1])
-            self.setWinner(saved_state[2])
-            self.setPlayer1Color(saved_state[3])
-            self.setPlayer2Color(saved_state[4])
-            self.setRemainMoves(saved_state[5])
+            self.setCurrentTurn(saved_state[0][0])
+            self.convertToBoard(saved_state[0][1])
+            self.setWinner(saved_state[0][2])
+            self.setPlayer1Color(saved_state[0][3])
+            self.setPlayer2Color(saved_state[0][4])
+            self.setRemainMoves(saved_state[0][5])
 
+    # Converts 2D board to string in order to input into database
     def stringBoard(self):
         board = self.getBoard()
         flat_board = [y for x in board for y in x]
-        print(flat_board)
         string_board = ' '.join(map(str, flat_board))
         return string_board
 
+    '''
+    Functions for move conditions
+    '''
     def setMove(self, col, player):
         openIndex = len(self.board) - 1
         for row in range(len(self.board)-1, -1, -1):
@@ -103,6 +110,7 @@ class Gameboard():
                 break
         self.board[openIndex][col] = player
         self.current_row = openIndex
+        # Adding gameboard information to database
         sql_tuple = (self.getCurrentTurn(), self.stringBoard(),
                      self.getWinner(), self.getPlayer1Color(),
                      self.getPlayer2Color(), self.getRemainMoves())
@@ -116,6 +124,9 @@ class Gameboard():
             return False
         return True
 
+    '''
+    Functions for win conditions
+    '''
     def vertical4(self, col, player):
         count = 0
         for row in range(len(self.board)-1, -1, -1):

@@ -62,7 +62,6 @@ def getMove():
         cur = conn.cursor()
         cur.execute("SELECT * FROM GAME ORDER BY remaining_moves ASC LIMIT 1 ")
         query = cur.fetchall()
-        print(query)
         return query
     except Error as e:
         print("db.py: getMove() - ", e)

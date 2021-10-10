@@ -162,7 +162,7 @@ class Test_TestGameboard(unittest.TestCase):
     def test_get_remain_moves(self):
         # checks remaining moves before draw
         game.remaining_moves = 42
-        game.setRemainMoves(1)
+        game.setRemainMoves(41)
         self.assertEqual(game.getRemainMoves(), 41)
 
     def test_draw_condition(self):

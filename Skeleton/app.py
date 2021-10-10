@@ -12,6 +12,15 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 game = Gameboard()
+db.init_db()
+
+# Resets database table when there is a winner / draw
+saved_state = db.getMove()
+if len(saved_state) == 0 or saved_state[0][2] != "":
+    print("Reset gameboard")
+else:
+    game.initSavedBoard()
+    print("Bringing up saved gameboard")
 
 '''
 Implement '/' endpoint
@@ -25,9 +34,6 @@ Initial Webpage where gameboard is initialized
 
 @app.route('/', methods=['GET'])
 def player1_connect():
-    db.clear()
-    db.init_db()
-    db.getMove()
     return render_template("player1_connect.html", status="Pick a Color.")
 
 
@@ -58,7 +64,6 @@ def player1_config():
     color = request.args.get('color')
     game.setPlayer1Color(color)
     # Initializing the last saved gameboard from sqlite3 db file
-    game.initSavedBoard()
     return render_template("player1_connect.html", status=color)
 
 
@@ -104,17 +109,22 @@ def p1_move():
     move = int(move) - 1
     # Draw condition
     if game.drawCondition():
+        game.setWinner("draw")
+        db.clear()
         return jsonify(move=game.getBoard(), invalid=True, reason="Draw!",
                        winner=game.getWinner())
     # Checks for valid move and if there's a win condition
     if game.isValidMove(move, "p1"):
-        game.setMove(move, game.getPlayer1Color())
         # Win conditions
+        game.decrementRemainMoves(1)
+        game.setCurrentTurn("p2")
+        game.setMove(move, game.getPlayer1Color())
         game.vertical4(move, game.getPlayer1Color())
         game.horizontal4(game.getPlayer1Color())
         game.diagonal4(move, game.getPlayer1Color())
-        game.setRemainMoves(1)
-        game.setCurrentTurn("p2")
+        # Clears database saved gameboard when there is a winner
+        if game.getWinner() != "":
+            db.clear()
         return jsonify(move=game.getBoard(), invalid=False,
                        winner=game.getWinner())
     # If invalid move, return either wrong turn or current column is full
@@ -137,18 +147,20 @@ Same as '/move1' but instead proccess Player 2
 def p2_move():
     move = request.get_json()["column"].split("col")[1]
     move = int(move) - 1
-
-    game.convertToBoard(' , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ,red , , , , , ,')
     if game.drawCondition():
+        game.setWinner("draw")
+        db.clear()
         return jsonify(move=game.getBoard(), invalid=True, reason="Draw!",
                        winner=game.getWinner())
     if game.isValidMove(move, "p2"):
+        game.decrementRemainMoves(1)
+        game.setCurrentTurn("p1")
         game.setMove(move, game.getPlayer2Color())
         game.vertical4(move, game.getPlayer2Color())
         game.horizontal4(game.getPlayer2Color())
         game.diagonal4(move, game.getPlayer2Color())
-        game.setRemainMoves(1)
-        game.setCurrentTurn("p1")
+        if game.getWinner() != "":
+            db.clear()
         return jsonify(move=game.getBoard(), invalid=False,
                        winner=game.getWinner())
     else:
