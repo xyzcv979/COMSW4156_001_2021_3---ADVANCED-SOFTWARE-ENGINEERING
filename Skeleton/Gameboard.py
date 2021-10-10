@@ -1,4 +1,4 @@
-# import db
+import db
 
 
 class Gameboard():
@@ -34,6 +34,7 @@ class Gameboard():
 
     def setWinner(self, player):
         self.game_result = player
+        db.clear()
 
     def getCurrentTurn(self):
         return self.current_turn
@@ -55,6 +56,45 @@ class Gameboard():
     def getBoard(self):
         return self.board
 
+    def setBoard(self, newBoard):
+        self.board = newBoard
+
+    def convertToMatrix(self, newBoard, rows, columns):
+        result = []
+        start = 0
+        end = columns
+        for i in range(rows):
+            result.append(newBoard[start:end])
+            start += columns
+            end += columns
+        return result
+
+    def convertToBoard(self, newBoard):
+        board = [newBoard.split(' ')]
+        board = self.convertToMatrix(board, 6, 7)
+        print(board)
+        self.board = board
+
+    def initSavedBoard(self):
+        # Database (current_turn, board, winner, player1, player2,
+        # remaining_moves)
+        saved_state = db.getMove()
+        # print(saved_state)
+        if(len(saved_state) != 0):
+            self.setCurrentTurn(saved_state[0])
+            self.convertToBoard(saved_state[1])
+            self.setWinner(saved_state[2])
+            self.setPlayer1Color(saved_state[3])
+            self.setPlayer2Color(saved_state[4])
+            self.setRemainMoves(saved_state[5])
+
+    def stringBoard(self):
+        board = self.getBoard()
+        flat_board = [y for x in board for y in x]
+        print(flat_board)
+        string_board = ' '.join(map(str, flat_board))
+        return string_board
+
     def setMove(self, col, player):
         openIndex = len(self.board) - 1
         for row in range(len(self.board)-1, -1, -1):
@@ -63,6 +103,10 @@ class Gameboard():
                 break
         self.board[openIndex][col] = player
         self.current_row = openIndex
+        sql_tuple = (self.getCurrentTurn(), self.stringBoard(),
+                     self.getWinner(), self.getPlayer1Color(),
+                     self.getPlayer2Color(), self.getRemainMoves())
+        db.add_move(sql_tuple)
 
     def isValidMove(self, col, player):
         # checks if top most slot is filled, or there's a winner, or it's not

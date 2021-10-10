@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, jsonify
 # from json import dump
 from Gameboard import Gameboard
 import logging
-# import db
+import db
 
 app = Flask(__name__)
 
@@ -25,6 +25,9 @@ Initial Webpage where gameboard is initialized
 
 @app.route('/', methods=['GET'])
 def player1_connect():
+    db.clear()
+    db.init_db()
+    db.getMove()
     return render_template("player1_connect.html", status="Pick a Color.")
 
 
@@ -54,6 +57,8 @@ Assign player1 their color
 def player1_config():
     color = request.args.get('color')
     game.setPlayer1Color(color)
+    # Initializing the last saved gameboard from sqlite3 db file
+    game.initSavedBoard()
     return render_template("player1_connect.html", status=color)
 
 
@@ -77,6 +82,7 @@ def p2Join():
         game.setPlayer2Color("yellow")
     elif player1Color == "yellow":
         game.setPlayer2Color("red")
+    # game.initSavedBoard()
     return render_template("p2Join.html", status=game.getPlayer2Color())
 
 
@@ -107,7 +113,7 @@ def p1_move():
         game.vertical4(move, game.getPlayer1Color())
         game.horizontal4(game.getPlayer1Color())
         game.diagonal4(move, game.getPlayer1Color())
-        game.setRemainMoves(-1)
+        game.setRemainMoves(1)
         game.setCurrentTurn("p2")
         return jsonify(move=game.getBoard(), invalid=False,
                        winner=game.getWinner())
@@ -131,6 +137,8 @@ Same as '/move1' but instead proccess Player 2
 def p2_move():
     move = request.get_json()["column"].split("col")[1]
     move = int(move) - 1
+
+    game.convertToBoard(' , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ,red , , , , , ,')
     if game.drawCondition():
         return jsonify(move=game.getBoard(), invalid=True, reason="Draw!",
                        winner=game.getWinner())
@@ -139,7 +147,7 @@ def p2_move():
         game.vertical4(move, game.getPlayer2Color())
         game.horizontal4(game.getPlayer2Color())
         game.diagonal4(move, game.getPlayer2Color())
-        game.setRemainMoves(-1)
+        game.setRemainMoves(1)
         game.setCurrentTurn("p1")
         return jsonify(move=game.getBoard(), invalid=False,
                        winner=game.getWinner())
